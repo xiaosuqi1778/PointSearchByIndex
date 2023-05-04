@@ -17,8 +17,8 @@
    <widget class="QLineEdit" name="inputX">
     <property name="geometry">
      <rect>
-      <x>450</x>
-      <y>30</y>
+      <x>440</x>
+      <y>100</y>
       <width>113</width>
       <height>21</height>
      </rect>
@@ -27,8 +27,8 @@
    <widget class="QLineEdit" name="inputY">
     <property name="geometry">
      <rect>
-      <x>450</x>
-      <y>80</y>
+      <x>440</x>
+      <y>150</y>
       <width>113</width>
       <height>21</height>
      </rect>
@@ -37,8 +37,8 @@
    <widget class="QLabel" name="label">
     <property name="geometry">
      <rect>
-      <x>370</x>
-      <y>30</y>
+      <x>360</x>
+      <y>100</y>
       <width>58</width>
       <height>17</height>
      </rect>
@@ -50,8 +50,8 @@
    <widget class="QLabel" name="label_2">
     <property name="geometry">
      <rect>
-      <x>370</x>
-      <y>80</y>
+      <x>360</x>
+      <y>150</y>
       <width>58</width>
       <height>17</height>
      </rect>
@@ -63,8 +63,8 @@
    <widget class="QPushButton" name="searchBtn">
     <property name="geometry">
      <rect>
-      <x>580</x>
-      <y>60</y>
+      <x>570</x>
+      <y>130</y>
       <width>80</width>
       <height>25</height>
      </rect>
@@ -91,6 +91,19 @@
       <width>331</width>
       <height>401</height>
      </rect>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="loadBtn">
+    <property name="geometry">
+     <rect>
+      <x>450</x>
+      <y>50</y>
+      <width>80</width>
+      <height>25</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>加载数据</string>
     </property>
    </widget>
   </widget>
