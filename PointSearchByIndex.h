@@ -8,9 +8,7 @@
 #include <string>
 #include <vector>
 #include <algorithm>
-//#include <iterator>
 #include <cmath>
-//#include <unordered_map>
 
 struct Point {
     int id;
@@ -18,7 +16,7 @@ struct Point {
     double y;//纬度
 };
 
-class Block
+class Block //X坐标相同归为一块
 {
 public:
     Block(int _start, int _end, double _mid_x) : start(_start), end(_end), mid_x(_mid_x) {}
@@ -43,24 +41,26 @@ public:
     ~PointSearchByIndex();
 
     void startMainWindow();
-    void startOriginData();
+    //void startOriginData();
 
     void warningMessage(QString msg);
 
-    int distanceSquare(const Point& a, const Point& b);//计算欧几里得距离的平方
-    bool compareX(const Point& a, const Point& b);//比较x坐标的大小
-    bool compareY(const Point& a, const Point& b);//比较y坐标的大小
+    double distanceSquare(const Point& a, const Point& b);//计算欧几里得距离的平方
+    static bool compareX(const Point& a, const Point& b);//比较x坐标的大小
+    static bool compareY(const Point& a, const Point& b);//比较y坐标的大小
 
     bool buildIndexFile();
     bool readCsvFile();
 
     int FindNearestPointInBlock(const Block& block);
+    Point closestPoint(std::vector<Point>& points, int left, int right, Point target);
     int searchNearestPoint();
     void showPointsList(int pt_id);
 private:
     Ui::PointSearchByIndexClass ui;
 
     std::vector<Point> allPoints;
+    std::vector<Point> allPointsBackup;
     std::vector<Block> blocks;
 
     Point targetPoint = { -1,-1,-1 };

@@ -12,12 +12,9 @@ using std::endl;
 // 定义常量
 const string DATA_FILE = "data.csv"; // 数据文件名
 const string INDEX_FILE = "index.txt"; // 索引文件名
-//const string ID = "ID"; // ID字段名
-//const string X = "X"; // X坐标字段名
-//const string Y = "Y"; // Y坐标字段名
 const char DELIMITER = ','; // 分隔符
-
-const int EXPANSION = 10000;//扩大倍数，减少浮点运算
+const int MAX_NUM = 1000000000;
+//const int EXPANSION = 10000;//扩大倍数，减少浮点运算
 
 
 PointSearchByIndex::PointSearchByIndex(QWidget *parent)
@@ -27,7 +24,6 @@ PointSearchByIndex::PointSearchByIndex(QWidget *parent)
     startMainWindow();
 
     //信号槽部分
-    
     connect(ui.loadBtn, &QPushButton::clicked, this, [&]() {
         if (!readCsvFile()) {
             warningMessage("Open File Error.");
@@ -37,6 +33,7 @@ PointSearchByIndex::PointSearchByIndex(QWidget *parent)
             warningMessage("Build Index File Error.");
             return;
         }
+        allPointsBackup = allPoints;
         warningMessage("Data File has built index file.");
         loadData = true;
     });
@@ -58,8 +55,10 @@ PointSearchByIndex::PointSearchByIndex(QWidget *parent)
         if (!cor[0] || !cor[1]) {
             warningMessage("\nPlease input target coordinate!\n");
             return;
-        }        
+        }
+        targetPoint = closestPoint(allPoints, 0, allPoints.size() - 1, targetPoint);
         showPointsList(searchNearestPoint());
+        allPoints = allPointsBackup;
     });
 
 
@@ -101,10 +100,10 @@ void PointSearchByIndex::warningMessage(QString msg)
 }
 
 
-int PointSearchByIndex::distanceSquare(const Point& a, const Point& b)
+double PointSearchByIndex::distanceSquare(const Point& a, const Point& b)
  {
-    int dx = (int)(a.x * EXPANSION) - (int)(b.x * EXPANSION);
-    int dy = (int)(a.y * EXPANSION) - (int)(b.y * EXPANSION);
+    double dx = a.x  - b.x ;
+    double dy = a.y  - b.y ;
     return dx * dx + dy * dy;
 }
 
@@ -131,20 +130,7 @@ bool PointSearchByIndex::buildIndexFile()
     string line;
     indexfile << "ID" << DELIMITER << "BLOCK" << endl; // Index：写入表头
 
-    // CSV：读取文件头
-    ui.targetView->append(QString::fromStdString("CSV Header Information:"));
-    string header1, header2;
-    getline(datafile, header1);
-    ui.targetView->append(QString::fromStdString(header1));
-    getline(datafile, header1);
-    ui.targetView->append(QString::fromStdString(header1));
-    getline(datafile, header1);
-    ui.targetView->append(QString::fromStdString(header1));
-    getline(datafile, header1);
-    ui.targetView->append(QString::fromStdString(header1));
-    getline(datafile, header2);
-    ui.targetView->append(QString::fromStdString(header2));
-
+    sort(allPoints.begin(), allPoints.end(), compareX);
     int group = 1;
     for (int i = 0; i < allPoints.size();)
     {
@@ -152,7 +138,7 @@ bool PointSearchByIndex::buildIndexFile()
         double mid_x = allPoints[i].x;
         while (i < allPoints.size() && allPoints[i].x == mid_x)
         {
-            indexfile << i << DELIMITER << group << endl;
+            indexfile << allPoints[i].id << DELIMITER << group << endl;
             ++i;
         }
         blocks.emplace_back(start, i - 1, mid_x);
@@ -230,7 +216,6 @@ bool PointSearchByIndex::readCsvFile()
         p.y = stod(y);
         allPoints.push_back(p);
     }
-
     // 关闭文件
     infile.close();
     return true;
@@ -238,85 +223,156 @@ bool PointSearchByIndex::readCsvFile()
 
 int PointSearchByIndex::FindNearestPointInBlock(const Block& block)
 {
-    int min_distance = INFINITY;
+    double min_distance = MAX_NUM;
     int result_id = -1;
 
     for (int i = block.Start(); i <= block.End(); ++i)
     {
-        int distance = distanceSquare(targetPoint, allPoints[i]);
+        /*if (block.End() >= allPoints.size())continue;*/
+        double distance = distanceSquare(targetPoint, allPoints[i]);
         if (distance < min_distance)
         {
             min_distance = distance;
             result_id = allPoints[i].id;
         }
     }
-
+    
     return result_id;
+}
+
+Point PointSearchByIndex::closestPoint(vector<Point>& points, int left, int right, Point target)
+{
+    // 如果只有一个点，直接返回
+    if (left == right) {
+        return points[left];
+    }
+
+    // 如果有两个点，比较它们和目标点的距离，返回较近的那个
+    if (left + 1 == right) {
+        if (distanceSquare(points[left], target) < distanceSquare(points[right], target)) {
+            return points[left];
+        }
+        else {
+            return points[right];
+        }
+    }
+
+    // 如果有多于两个点，先按照x坐标排序，然后找到中间位置
+    sort(points.begin() + left, points.begin() + right + 1, compareX);
+    int mid = (left + right) / 2;
+
+    if (target.x < points[mid].x) {
+        return closestPoint(points, left, mid, target);
+    }
+    else if (target.x > points[mid].x) {
+        return closestPoint(points, mid + 1, right, target);
+    }
+    else {
+        // 递归查找左半部分和右半部分的最近点
+        Point leftClosest = closestPoint(points, left, mid - 1, target);
+        Point rightClosest = closestPoint(points, mid + 1, right, target);
+        // 比较两个最近点和中间位置的点和目标点的距离，返回最小的那个
+        double d1 = distanceSquare(leftClosest, target);
+        double d2 = distanceSquare(rightClosest, target);
+        double d3 = distanceSquare(points[mid], target);
+        if (d1 <= d2 && d1 <= d3) {
+            return leftClosest;
+        }
+        else if (d2 <= d1 && d2 <= d3) {
+            return rightClosest;
+        }
+        else {
+            return points[mid];
+        }
+    }
+
 }
 
 int PointSearchByIndex::searchNearestPoint()
 {
     // 在目标点所在的块以及左侧和右侧的两个块中查找距离最近的点
-    int min_distance = INFINITY;
+    double min_distance = INFINITY;
     int result_id = -1;
-
-    for (const auto& block : blocks)
+    //ofstream fl ("debug.txt");
+    int count = 0;
+    //std::cout << "total:" << allPoints.size() << "\t" << blocks.size() << endl;
+    for (/*int i=0;i<blocks.size();i++*/const auto& block : blocks)
     {
-        if (block.Start() > 0)
+        //Block block = blocks[i];
+        //std::cout << ++count<< ":\t" << block.Start() << "," << block.End() << endl;
+
+        if (block.Start() > 0 && block.Start() - 1 < allPoints.size())
         {
-            int distance_to_left_block = abs(targetPoint.x - blocks[block.Start() - 1].MidX())*EXPANSION*EXPANSION;
+            double distance_to_left_block = abs(targetPoint.x - block/*s[block.Start() - 1]*/.MidX());
             if (distance_to_left_block < min_distance)
             {
-                int nearest_point_in_left_block =
-                    FindNearestPointInBlock(blocks[block.Start() - 1]);
-                int distance_to_nearest_point_in_left_block =
-                    distanceSquare(targetPoint,allPoints[nearest_point_in_left_block]);
-                if (distance_to_nearest_point_in_left_block < min_distance)
-                {
-                    min_distance = distance_to_nearest_point_in_left_block;
-                    result_id = nearest_point_in_left_block;
+                int nearest_point_in_left_block =FindNearestPointInBlock(block/*s[block.Start() - 1]*/);
+                if (nearest_point_in_left_block < allPoints.size()) {
+                    double distance_to_nearest_point_in_left_block =
+                        distanceSquare(targetPoint,allPoints[nearest_point_in_left_block]);
+                    if (distance_to_nearest_point_in_left_block < min_distance)
+                    {
+                        min_distance = distance_to_nearest_point_in_left_block;
+                        result_id = nearest_point_in_left_block;
+                    }
+                }
+                else {
+                    // 打印一些错误信息或者抛出异常
                 }
             }
         }
 
         int nearest_point_in_block =FindNearestPointInBlock(block);
-        int distance_to_nearest_point_in_block =distanceSquare(targetPoint, allPoints[nearest_point_in_block]);
-        if (distance_to_nearest_point_in_block < min_distance)
+        if (nearest_point_in_block >= 0 && nearest_point_in_block < allPoints.size())
         {
-            min_distance = distance_to_nearest_point_in_block;
-            result_id = nearest_point_in_block;
+            double distance_to_nearest_point_in_block =
+                distanceSquare(targetPoint, allPoints[nearest_point_in_block]);
+            if (distance_to_nearest_point_in_block < min_distance)
+            {
+                min_distance = distance_to_nearest_point_in_block;
+                result_id = nearest_point_in_block;
+            }
+        }
+        else {
+            // 打印一些错误信息或者抛出异常
+            //std::cerr << "Out of Range!" << endl;
+            //exit(3);
         }
 
-        if (block.End() < allPoints.size() - 1)
+        if (block.End() < allPoints.size() - 1 /*&& block.End() + 1 < allPoints.size()*/)
         {
-            int distance_to_right_block =
-                abs(blocks[block.End() + 1].MidX() - targetPoint.x)*EXPANSION*EXPANSION;
+            double distance_to_right_block =abs(block/*s[block.End() + 1]*/.MidX() - targetPoint.x);
             if (distance_to_right_block < min_distance)
             {
                 int nearest_point_in_right_block =
-                    FindNearestPointInBlock(blocks[block.End() + 1]);
-                int distance_to_nearest_point_in_right_block =
-                    distanceSquare(targetPoint,allPoints[nearest_point_in_right_block]);
-                if (distance_to_nearest_point_in_right_block < min_distance)
-                {
-                    min_distance = distance_to_nearest_point_in_right_block;
-                    result_id = nearest_point_in_right_block;
+                    FindNearestPointInBlock(block/*s[block.End() + 1]*/);
+                if (nearest_point_in_right_block < allPoints.size()) {
+                    double distance_to_nearest_point_in_right_block =
+                        distanceSquare(targetPoint,allPoints[nearest_point_in_right_block]);
+                    if (distance_to_nearest_point_in_right_block < min_distance)
+                    {
+                        min_distance = distance_to_nearest_point_in_right_block;
+                        result_id = nearest_point_in_right_block;
+                    }
+                }
+                else {
+                    // 打印一些错误信息或者抛出异常
                 }
             }
         }
     }
+    //std::cout << result_id;
     return result_id;
-
 }
 
 void PointSearchByIndex::showPointsList(int pt_id)
 {
     ui.pointsView->clearContents();
     vector<Point> nearPoints;
-    int startID = (pt_id - 20 < 1) ? 1 : pt_id - 20;//开始的点
-    int endID = (allPoints.size() < pt_id + 20) ? allPoints.size() : pt_id + 20;//结束的点
+    int startID = (targetPoint.id - 20 < 1) ? 1 : targetPoint.id - 20;//开始的点
+    int endID = (allPoints.size() < targetPoint.id + 20) ? allPoints.size() : targetPoint.id + 20;//结束的点
     for (int i = 0; i <= (endID - startID); i++) {
-        if (allPoints[startID + i - 1].id == pt_id)continue;
+        if (allPoints[startID + i - 1].id == targetPoint.id)continue;
         nearPoints.push_back(allPoints[startID + i - 1]);
     }
     for (unsigned int i = 0; i < nearPoints.size(); i++) {
@@ -325,11 +381,10 @@ void PointSearchByIndex::showPointsList(int pt_id)
         ui.pointsView->setItem(i, 2, new QTableWidgetItem(QString::number(nearPoints[i].y)));
     }
     QString msg = QString("\nThe nearest(or target) point information:")
-        .append("\ntargetID:").append(QString::number(pt_id))
-        .append("\ntargetX:").append(QString::number(allPoints[pt_id].id))
-        .append("\ntargetY:").append(QString::number(allPoints[pt_id].y))
-        .append("\ndistance:").append(QString::number(sqrt((double)distanceSquare(allPoints[pt_id], targetPoint)
-            /(EXPANSION*EXPANSION))));
+        .append("\ntargetID:").append(QString::number(targetPoint.id))
+        .append("\ntargetX:").append(QString::number(targetPoint.id))
+        .append("\ntargetY:").append(QString::number(targetPoint.y))
+        .append("\ndistance:").append(QString::number(sqrt(distanceSquare(targetPoint, targetPoint))));
     ui.targetView->append(msg);
 }
 

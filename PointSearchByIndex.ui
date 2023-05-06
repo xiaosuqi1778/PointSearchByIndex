@@ -76,10 +76,10 @@
    <widget class="QTextEdit" name="targetView">
     <property name="geometry">
      <rect>
-      <x>410</x>
-      <y>220</y>
-      <width>104</width>
-      <height>71</height>
+      <x>360</x>
+      <y>190</y>
+      <width>291</width>
+      <height>231</height>
      </rect>
     </property>
    </widget>
