@@ -21,9 +21,9 @@ class Block //X坐标相同归为一块
 public:
     Block(int _start, int _end, double _mid_x) : start(_start), end(_end), mid_x(_mid_x) {}
 
-    int Start() const { return start; }
-    int End() const { return end; }
-    double MidX() const { return mid_x; }
+    int getStart() const { return start; }
+    int getEnd() const { return end; }
+    double getMid() const { return mid_x; }
 
 private:
     int start;
@@ -41,8 +41,6 @@ public:
     ~PointSearchByIndex();
 
     void startMainWindow();
-    //void startOriginData();
-
     void warningMessage(QString msg);
 
     double distanceSquare(const Point& a, const Point& b);//计算欧几里得距离的平方
@@ -52,10 +50,11 @@ public:
     bool buildIndexFile();
     bool readCsvFile();
 
-    int FindNearestPointInBlock(const Block& block);
+    int findNearestPointInBlock(const Block& block);
     Point closestPoint(std::vector<Point>& points, int left, int right, Point target);
     int searchNearestPoint();
     void showPointsList(int pt_id);
+
 private:
     Ui::PointSearchByIndexClass ui;
 
